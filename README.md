@@ -1,4 +1,4 @@
-# EM - Reenviar Correos WooCommerce
+# YG_DEV - Reenviar Correos WooCommerce
 
 Reenvía en bloque correos de WooCommerce para pedidos dentro de un rango de fechas, con filtros por estados, tipos de correo y exclusiones (por ejemplo, pagos contraentrega `cod`). Incluye modo simulación para evaluar el impacto antes de enviar.
 
