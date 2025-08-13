@@ -3,7 +3,7 @@
 /**
  * Plugin Name: YG_DEV - Reenviar Correos WooCommerce
  * Description: Reenvía correos de WooCommerce en bloque para un rango de fechas. Permite elegir tipos de email, estados, y excluir métodos de pago (p. ej., contraentrega/cod).
- * Version: 1.0.2
+ * Version: 1.0.3
  * Author: Yogui Dev
  * License: GPLv2 or later
  * Requires Plugins: woocommerce
@@ -183,8 +183,8 @@ function yg_dev_resend_wc_emails_admin_page()
     $end_raw   = isset($_POST['end']) ? sanitize_text_field(wp_unslash($_POST['end'])) : $default_end;
 
     // Convertir a formato MySQL "YYYY-mm-dd HH:ii:ss"
-    $start_mysql = em_resend_wc_emails_to_mysql_datetime($start_raw);
-    $end_mysql   = em_resend_wc_emails_to_mysql_datetime($end_raw);
+    $start_mysql = yg_dev_resend_wc_emails_to_mysql_datetime($start_raw);
+    $end_mysql   = yg_dev_resend_wc_emails_to_mysql_datetime($end_raw);
 
     // Estados seleccionados
     $statuses = isset($_POST['statuses']) && is_array($_POST['statuses']) ? array_map('sanitize_text_field', wp_unslash($_POST['statuses'])) : $default_statuses;
@@ -313,6 +313,11 @@ function yg_dev_resend_wc_emails_admin_page()
                 continue;
               }
 
+              // Respetar configuración de WooCommerce: no enviar si el email está deshabilitado
+              if (method_exists($emails[$class], 'is_enabled') && ! $emails[$class]->is_enabled()) {
+                continue;
+              }
+
               if ($dry_run) {
                 // En modo prueba, no enviar; solo contar que "se habría enviado"
                 $sent_counts[$key]++;
@@ -415,7 +420,8 @@ function yg_dev_resend_wc_emails_admin_page()
 
   // Exclusiones y opciones
   echo '<tr><th scope="row">' . esc_html__('Filtros adicionales', 'yg-dev-resend-wc-emails') . '</th><td>';
-  $exclude_cod_checked = ! empty($_POST['exclude_cod']) ? 'checked' : 'checked'; // por defecto marcado
+  // Por defecto marcado en la primera carga; respeta la selección del usuario tras enviar
+  $exclude_cod_checked = (isset($_POST['exclude_cod']) || ! isset($_POST['em_resend_submit'])) ? 'checked' : '';
   printf('<label style="display:block;margin-bottom:6px;"><input type="checkbox" name="exclude_cod" value="1" %s> %s</label>', $exclude_cod_checked, esc_html__('Excluir pagos en efectivo (cod)', 'yg-dev-resend-wc-emails'));
   $only_not_sent_admin_checked = ! empty($_POST['only_if_not_sent_admin']) ? 'checked' : '';
   printf('<label style="display:block;margin-bottom:6px;"><input type="checkbox" name="only_if_not_sent_admin" value="1" %s> %s</label>', $only_not_sent_admin_checked, esc_html__('Solo enviar "Nuevo pedido (admin)" si no fue enviado antes (_new_order_email_sent ≠ 1)', 'yg-dev-resend-wc-emails'));
@@ -427,8 +433,8 @@ function yg_dev_resend_wc_emails_admin_page()
 
   echo '</table>';
 
-  // Botón enviar
-  submit_button(__('Ejecutar', 'yg-dev-resend-wc-emails'));
+  // Botón enviar (con nombre para detectar el submit)
+  submit_button(__('Ejecutar', 'yg-dev-resend-wc-emails'), 'primary', 'em_resend_submit');
 
   echo '</form>';
 
