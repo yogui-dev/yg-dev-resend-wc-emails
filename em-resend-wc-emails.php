@@ -22,13 +22,13 @@ add_action('plugins_loaded', function () {
   }
 
   // Registrar la página de administración en el menú de WooCommerce
-  add_action('admin_menu', 'em_resend_wc_emails_register_menu');
+  add_action('admin_menu', 'yg_dev_resend_wc_emails_register_menu');
 });
 
 /**
  * Registrar submenú bajo WooCommerce.
  */
-function em_resend_wc_emails_register_menu()
+function yg_dev_resend_wc_emails_register_menu()
 {
   // Solo administradores de WooCommerce
   if (! current_user_can('manage_woocommerce')) return;
@@ -40,14 +40,14 @@ function em_resend_wc_emails_register_menu()
     __('Reenviar Emails', 'em-resend-wc-emails'),
     'manage_woocommerce',
     'em-resend-wc-emails',
-    'em_resend_wc_emails_admin_page'
+    'yg_dev_resend_wc_emails_admin_page'
   );
 }
 
 /**
  * Renderizar la pantalla de administración y procesar el formulario.
  */
-function em_resend_wc_emails_admin_page()
+function yg_dev_resend_wc_emails_admin_page()
 {
   // Chequear permisos
   if (! current_user_can('manage_woocommerce')) {
@@ -71,8 +71,8 @@ function em_resend_wc_emails_admin_page()
   // =============================
   $current_start_raw = isset($_POST['start']) ? sanitize_text_field(wp_unslash($_POST['start'])) : $default_start;
   $current_end_raw   = isset($_POST['end']) ? sanitize_text_field(wp_unslash($_POST['end'])) : $default_end;
-  $current_start_mysql = em_resend_wc_emails_to_mysql_datetime($current_start_raw);
-  $current_end_mysql   = em_resend_wc_emails_to_mysql_datetime($current_end_raw);
+  $current_start_mysql = yg_dev_resend_wc_emails_to_mysql_datetime($current_start_raw);
+  $current_end_mysql   = yg_dev_resend_wc_emails_to_mysql_datetime($current_end_raw);
   $current_statuses = isset($_POST['statuses']) && is_array($_POST['statuses']) ? array_map('sanitize_text_field', wp_unslash($_POST['statuses'])) : $default_statuses;
   if (empty($current_statuses)) {
     $current_statuses = $default_statuses;
@@ -528,7 +528,7 @@ function em_resend_wc_emails_admin_page()
  * @param string $val Cadena desde el input.
  * @return string|false Fecha en formato MySQL o false en error.
  */
-function em_resend_wc_emails_to_mysql_datetime($val)
+function yg_dev_resend_wc_emails_to_mysql_datetime($val)
 {
   // Validación rápida
   if (! is_string($val) || empty($val)) {

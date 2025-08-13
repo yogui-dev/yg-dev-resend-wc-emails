@@ -58,7 +58,7 @@ Al finalizar, verás un resumen con:
 
 ## Detalles técnicos
 
-- Pantalla y lógica principal en `em-resend-wc-emails.php`, función `em_resend_wc_emails_admin_page()`.
+- Pantalla y lógica principal en `em-resend-wc-emails.php`, función `yg_dev_resend_wc_emails_admin_page()`.
 - Consulta de pedidos con `wc_get_orders()` filtrando por `status`, `date_created` y `meta_query` (para excluir `cod`).
 - Se usa `WC()->mailer()->emails` y se dispara `->trigger($order_id)` de las clases de correo de WooCommerce, p. ej.:
   - `WC_Email_New_Order`
