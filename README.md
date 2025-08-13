@@ -3,10 +3,14 @@
 Reenvía en bloque correos de WooCommerce para pedidos dentro de un rango de fechas, con filtros por estados, tipos de correo y exclusiones (por ejemplo, pagos contraentrega `cod`). Incluye modo simulación para evaluar el impacto antes de enviar.
 
 - Autor: Yogui Dev
-- Versión: 1.0.2
+- Versión: 1.0.3
 - Licencia: GPLv2 or later
 - Requiere: WordPress + WooCommerce activos
 - Archivo principal: `yg-dev-resend-wc-emails.php`
+
+## Repositorio
+
+Repositorio oficial: https://github.com/yogui-dev/yg-dev-resend-wc-emails
 
 ## Características
 
