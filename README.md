@@ -116,4 +116,8 @@ Este plugin se distribuye bajo la licencia GPLv2 o posterior.
 
 ---
 
-Hecho con 💙 por Estudio Moca.
+Por Yogui Dev — creando herramientas simples y útiles para tiendas con WooCommerce.
+
+Si este plugin te ayudó, considera dejar una ⭐ en el repositorio:
+https://github.com/yogui-dev/yg-dev-resend-wc-emails
+¡Gracias por apoyar el software libre!
