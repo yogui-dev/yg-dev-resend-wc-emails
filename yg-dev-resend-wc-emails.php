@@ -7,6 +7,7 @@
  * Author: Yogui Dev
  * License: GPLv2 or later
  * Requires Plugins: woocommerce
+ * Text Domain: yg-dev-resend-wc-emails
  */
 
 // Salir si se accede directamente
@@ -36,10 +37,10 @@ function yg_dev_resend_wc_emails_register_menu()
   // Agregar página bajo WooCommerce -> Reenviar Emails
   add_submenu_page(
     'woocommerce',
-    __('Reenviar Emails', 'em-resend-wc-emails'),
-    __('Reenviar Emails', 'em-resend-wc-emails'),
+    __('Reenviar Emails', 'yg-dev-resend-wc-emails'),
+    __('Reenviar Emails', 'yg-dev-resend-wc-emails'),
     'manage_woocommerce',
-    'em-resend-wc-emails',
+    'yg-dev-resend-wc-emails',
     'yg_dev_resend_wc_emails_admin_page'
   );
 }
@@ -51,7 +52,7 @@ function yg_dev_resend_wc_emails_admin_page()
 {
   // Chequear permisos
   if (! current_user_can('manage_woocommerce')) {
-    wp_die(esc_html__('No tienes permisos para acceder a esta página.', 'em-resend-wc-emails'));
+    wp_die(esc_html__('No tienes permisos para acceder a esta página.', 'yg-dev-resend-wc-emails'));
   }
 
   // Valores por defecto del formulario
@@ -123,14 +124,14 @@ function yg_dev_resend_wc_emails_admin_page()
       }
 
       $email_labels = array(
-        'admin_new_order'     => __('Nuevo pedido (admin)', 'em-resend-wc-emails'),
-        'customer_on_hold'    => __('Pedido en espera (cliente)', 'em-resend-wc-emails'),
-        'customer_processing' => __('Pedido en procesamiento (cliente)', 'em-resend-wc-emails'),
-        'customer_completed'  => __('Pedido completado (cliente)', 'em-resend-wc-emails'),
-        'customer_failed'     => __('Pedido fallido (cliente)', 'em-resend-wc-emails'),
-        'customer_cancelled'  => __('Pedido cancelado (cliente)', 'em-resend-wc-emails'),
-        'customer_invoice'    => __('Factura/Detalles de pedido (cliente)', 'em-resend-wc-emails'),
-        'customer_refunded'   => __('Pedido reembolsado (cliente)', 'em-resend-wc-emails'),
+        'admin_new_order'     => __('Nuevo pedido (admin)', 'yg-dev-resend-wc-emails'),
+        'customer_on_hold'    => __('Pedido en espera (cliente)', 'yg-dev-resend-wc-emails'),
+        'customer_processing' => __('Pedido en procesamiento (cliente)', 'yg-dev-resend-wc-emails'),
+        'customer_completed'  => __('Pedido completado (cliente)', 'yg-dev-resend-wc-emails'),
+        'customer_failed'     => __('Pedido fallido (cliente)', 'yg-dev-resend-wc-emails'),
+        'customer_cancelled'  => __('Pedido cancelado (cliente)', 'yg-dev-resend-wc-emails'),
+        'customer_invoice'    => __('Factura/Detalles de pedido (cliente)', 'yg-dev-resend-wc-emails'),
+        'customer_refunded'   => __('Pedido reembolsado (cliente)', 'yg-dev-resend-wc-emails'),
       );
 
       foreach ($preview_order_ids as $oid) {
@@ -205,9 +206,9 @@ function yg_dev_resend_wc_emails_admin_page()
 
     // Validación básica de fechas
     if (! $start_mysql || ! $end_mysql) {
-      $messages[] = array('type' => 'error', 'text' => __('Formato de fecha/hora inválido. Usa el selector.', 'em-resend-wc-emails'));
+      $messages[] = array('type' => 'error', 'text' => __('Formato de fecha/hora inválido. Usa el selector.', 'yg-dev-resend-wc-emails'));
     } elseif ($start_mysql > $end_mysql) {
-      $messages[] = array('type' => 'error', 'text' => __('La fecha de inicio no puede ser mayor que la de término.', 'em-resend-wc-emails'));
+      $messages[] = array('type' => 'error', 'text' => __('La fecha de inicio no puede ser mayor que la de término.', 'yg-dev-resend-wc-emails'));
     } else {
       // Construir args de consulta de pedidos
       $args = array(
@@ -233,7 +234,7 @@ function yg_dev_resend_wc_emails_admin_page()
 
       // Si no hay pedidos, mostrar aviso y terminar
       if (empty($order_ids)) {
-        $messages[] = array('type' => 'warning', 'text' => __('No se encontraron pedidos en el rango indicado con los filtros aplicados.', 'em-resend-wc-emails'));
+        $messages[] = array('type' => 'warning', 'text' => __('No se encontraron pedidos en el rango indicado con los filtros aplicados.', 'yg-dev-resend-wc-emails'));
       } else {
         // Cargar mailer y mapa de emails soportados
         $mailer = WC()->mailer();
@@ -264,7 +265,7 @@ function yg_dev_resend_wc_emails_admin_page()
 
         // Validar selección de emails
         if (empty($to_send_keys)) {
-          $messages[] = array('type' => 'error', 'text' => __('Selecciona al menos un tipo de correo a reenviar.', 'em-resend-wc-emails'));
+          $messages[] = array('type' => 'error', 'text' => __('Selecciona al menos un tipo de correo a reenviar.', 'yg-dev-resend-wc-emails'));
         } else {
           // Contadores de envío por tipo
           $sent_counts = array_fill_keys($to_send_keys, 0);
@@ -338,9 +339,9 @@ function yg_dev_resend_wc_emails_admin_page()
           $results['orders']       = $orders_data;
 
           if ($dry_run) {
-            $messages[] = array('type' => 'info', 'text' => __('Simulación completa: no se enviaron correos. Revisa el resumen para ver cuántos se enviarían.', 'em-resend-wc-emails'));
+            $messages[] = array('type' => 'info', 'text' => __('Simulación completa: no se enviaron correos. Revisa el resumen para ver cuántos se enviarían.', 'yg-dev-resend-wc-emails'));
           } else {
-            $messages[] = array('type' => 'success', 'text' => __('Proceso finalizado. Revisa el resumen de envíos.', 'em-resend-wc-emails'));
+            $messages[] = array('type' => 'success', 'text' => __('Proceso finalizado. Revisa el resumen de envíos.', 'yg-dev-resend-wc-emails'));
           }
         }
       }
@@ -349,7 +350,7 @@ function yg_dev_resend_wc_emails_admin_page()
 
   // Render de la página
   echo '<div class="wrap">';
-  echo '<h1>' . esc_html__('Reenviar correos de WooCommerce', 'em-resend-wc-emails') . '</h1>';
+  echo '<h1>' . esc_html__('Reenviar correos de WooCommerce', 'yg-dev-resend-wc-emails') . '</h1>';
 
   // Mensajes
   foreach ($messages as $m) {
@@ -364,16 +365,16 @@ function yg_dev_resend_wc_emails_admin_page()
   echo '<table class="form-table" role="presentation">';
 
   // Rango de fechas
-  echo '<tr><th scope="row">' . esc_html__('Rango de fechas', 'em-resend-wc-emails') . '</th><td>';
+  echo '<tr><th scope="row">' . esc_html__('Rango de fechas', 'yg-dev-resend-wc-emails') . '</th><td>';
   $start_val = isset($_POST['start']) ? sanitize_text_field(wp_unslash($_POST['start'])) : $default_start;
   $end_val   = isset($_POST['end']) ? sanitize_text_field(wp_unslash($_POST['end'])) : $default_end;
-  printf('<label>%s <input type="datetime-local" name="start" value="%s" required></label> ', esc_html__('Inicio', 'em-resend-wc-emails'), esc_attr($start_val));
-  printf('<label style="margin-left:12px;">%s <input type="datetime-local" name="end" value="%s" required></label>', esc_html__('Término', 'em-resend-wc-emails'), esc_attr($end_val));
-  echo '<p class="description">' . esc_html__('Usa la zona horaria configurada en tu sitio (Ajustes -> General).', 'em-resend-wc-emails') . '</p>';
+  printf('<label>%s <input type="datetime-local" name="start" value="%s" required></label> ', esc_html__('Inicio', 'yg-dev-resend-wc-emails'), esc_attr($start_val));
+  printf('<label style="margin-left:12px;">%s <input type="datetime-local" name="end" value="%s" required></label>', esc_html__('Término', 'yg-dev-resend-wc-emails'), esc_attr($end_val));
+  echo '<p class="description">' . esc_html__('Usa la zona horaria configurada en tu sitio (Ajustes -> General).', 'yg-dev-resend-wc-emails') . '</p>';
   echo '</td></tr>';
 
   // Estados
-  echo '<tr><th scope="row">' . esc_html__('Estados de pedido', 'em-resend-wc-emails') . '</th><td>';
+  echo '<tr><th scope="row">' . esc_html__('Estados de pedido', 'yg-dev-resend-wc-emails') . '</th><td>';
   $all_statuses = wc_get_order_statuses();
   $selected_statuses = isset($_POST['statuses']) && is_array($_POST['statuses']) ? array_map('sanitize_text_field', wp_unslash($_POST['statuses'])) : $default_statuses;
   foreach ($all_statuses as $slug => $label) {
@@ -388,16 +389,16 @@ function yg_dev_resend_wc_emails_admin_page()
   echo '</td></tr>';
 
   // Tipos de email
-  echo '<tr><th scope="row">' . esc_html__('Tipos de correos a reenviar', 'em-resend-wc-emails') . '</th><td>';
+  echo '<tr><th scope="row">' . esc_html__('Tipos de correos a reenviar', 'yg-dev-resend-wc-emails') . '</th><td>';
   $email_options = array(
-    'admin_new_order'     => __('Nuevo pedido (admin)', 'em-resend-wc-emails'),
-    'customer_on_hold'    => __('Pedido en espera (cliente)', 'em-resend-wc-emails'),
-    'customer_processing' => __('Pedido en procesamiento (cliente)', 'em-resend-wc-emails'),
-    'customer_completed'  => __('Pedido completado (cliente)', 'em-resend-wc-emails'),
-    'customer_failed'     => __('Pedido fallido (cliente)', 'em-resend-wc-emails'),
-    'customer_cancelled'  => __('Pedido cancelado (cliente)', 'em-resend-wc-emails'),
-    'customer_invoice'    => __('Factura/Detalles de pedido (cliente)', 'em-resend-wc-emails'),
-    'customer_refunded'   => __('Pedido reembolsado (cliente)', 'em-resend-wc-emails'),
+    'admin_new_order'     => __('Nuevo pedido (admin)', 'yg-dev-resend-wc-emails'),
+    'customer_on_hold'    => __('Pedido en espera (cliente)', 'yg-dev-resend-wc-emails'),
+    'customer_processing' => __('Pedido en procesamiento (cliente)', 'yg-dev-resend-wc-emails'),
+    'customer_completed'  => __('Pedido completado (cliente)', 'yg-dev-resend-wc-emails'),
+    'customer_failed'     => __('Pedido fallido (cliente)', 'yg-dev-resend-wc-emails'),
+    'customer_cancelled'  => __('Pedido cancelado (cliente)', 'yg-dev-resend-wc-emails'),
+    'customer_invoice'    => __('Factura/Detalles de pedido (cliente)', 'yg-dev-resend-wc-emails'),
+    'customer_refunded'   => __('Pedido reembolsado (cliente)', 'yg-dev-resend-wc-emails'),
   );
   $selected_emails = isset($_POST['emails']) && is_array($_POST['emails']) ? array_map('sanitize_text_field', wp_unslash($_POST['emails'])) : array('admin_new_order', 'customer_processing', 'customer_completed');
   foreach ($email_options as $key => $label) {
@@ -409,43 +410,43 @@ function yg_dev_resend_wc_emails_admin_page()
       esc_html($label)
     );
   }
-  echo '<p class="description">' . esc_html__('Solo se enviarán los correos que estén habilitados en WooCommerce → Ajustes → Correos electrónicos.', 'em-resend-wc-emails') . '</p>';
+  echo '<p class="description">' . esc_html__('Solo se enviarán los correos que estén habilitados en WooCommerce → Ajustes → Correos electrónicos.', 'yg-dev-resend-wc-emails') . '</p>';
   echo '</td></tr>';
 
   // Exclusiones y opciones
-  echo '<tr><th scope="row">' . esc_html__('Filtros adicionales', 'em-resend-wc-emails') . '</th><td>';
+  echo '<tr><th scope="row">' . esc_html__('Filtros adicionales', 'yg-dev-resend-wc-emails') . '</th><td>';
   $exclude_cod_checked = ! empty($_POST['exclude_cod']) ? 'checked' : 'checked'; // por defecto marcado
-  printf('<label style="display:block;margin-bottom:6px;"><input type="checkbox" name="exclude_cod" value="1" %s> %s</label>', $exclude_cod_checked, esc_html__('Excluir pagos en efectivo (cod)', 'em-resend-wc-emails'));
+  printf('<label style="display:block;margin-bottom:6px;"><input type="checkbox" name="exclude_cod" value="1" %s> %s</label>', $exclude_cod_checked, esc_html__('Excluir pagos en efectivo (cod)', 'yg-dev-resend-wc-emails'));
   $only_not_sent_admin_checked = ! empty($_POST['only_if_not_sent_admin']) ? 'checked' : '';
-  printf('<label style="display:block;margin-bottom:6px;"><input type="checkbox" name="only_if_not_sent_admin" value="1" %s> %s</label>', $only_not_sent_admin_checked, esc_html__('Solo enviar "Nuevo pedido (admin)" si no fue enviado antes (_new_order_email_sent ≠ 1)', 'em-resend-wc-emails'));
+  printf('<label style="display:block;margin-bottom:6px;"><input type="checkbox" name="only_if_not_sent_admin" value="1" %s> %s</label>', $only_not_sent_admin_checked, esc_html__('Solo enviar "Nuevo pedido (admin)" si no fue enviado antes (_new_order_email_sent ≠ 1)', 'yg-dev-resend-wc-emails'));
 
   $dry_run_checked = ! empty($_POST['dry_run']) ? 'checked' : '';
-  printf('<label style="display:block;margin-bottom:6px;"><input type="checkbox" name="dry_run" value="1" %s> %s</label>', $dry_run_checked, esc_html__('Simular (no envía, solo calcula)', 'em-resend-wc-emails'));
+  printf('<label style="display:block;margin-bottom:6px;"><input type="checkbox" name="dry_run" value="1" %s> %s</label>', $dry_run_checked, esc_html__('Simular (no envía, solo calcula)', 'yg-dev-resend-wc-emails'));
 
   echo '</td></tr>';
 
   echo '</table>';
 
   // Botón enviar
-  submit_button(__('Ejecutar', 'em-resend-wc-emails'));
+  submit_button(__('Ejecutar', 'yg-dev-resend-wc-emails'));
 
   echo '</form>';
 
   // =============================
   // Vista previa: correos por enviar según filtros actuales
   // =============================
-  echo '<h2 style="margin-top:20px;">' . esc_html__('Vista previa de correos por enviar', 'em-resend-wc-emails') . '</h2>';
+  echo '<h2 style="margin-top:20px;">' . esc_html__('Vista previa de correos por enviar', 'yg-dev-resend-wc-emails') . '</h2>';
   if (empty($preview_email_rows)) {
-    echo '<p>' . esc_html__('No hay correos para previsualizar con los filtros actuales.', 'em-resend-wc-emails') . '</p>';
+    echo '<p>' . esc_html__('No hay correos para previsualizar con los filtros actuales.', 'yg-dev-resend-wc-emails') . '</p>';
   } else {
-    printf('<p>' . esc_html__('%d elementos en la vista previa (pedido x tipo de correo).', 'em-resend-wc-emails') . '</p>', count($preview_email_rows));
+    printf('<p>' . esc_html__('%d elementos en la vista previa (pedido x tipo de correo).', 'yg-dev-resend-wc-emails') . '</p>', count($preview_email_rows));
     echo '<div style="overflow:auto">';
     echo '<table class="widefat striped" style="margin-top:10px;">';
     echo '<thead><tr>'
-      . '<th>' . esc_html__('ID', 'em-resend-wc-emails') . '</th>'
-      . '<th>' . esc_html__('# Pedido', 'em-resend-wc-emails') . '</th>'
-      . '<th>' . esc_html__('Fecha', 'em-resend-wc-emails') . '</th>'
-      . '<th>' . esc_html__('Correo', 'em-resend-wc-emails') . '</th>'
+      . '<th>' . esc_html__('ID', 'yg-dev-resend-wc-emails') . '</th>'
+      . '<th>' . esc_html__('# Pedido', 'yg-dev-resend-wc-emails') . '</th>'
+      . '<th>' . esc_html__('Fecha', 'yg-dev-resend-wc-emails') . '</th>'
+      . '<th>' . esc_html__('Correo', 'yg-dev-resend-wc-emails') . '</th>'
       . '</tr></thead>';
     echo '<tbody>';
     foreach ($preview_email_rows as $r) {
@@ -463,8 +464,8 @@ function yg_dev_resend_wc_emails_admin_page()
   // Mostrar resumen si existe
   if (! empty($results)) {
     echo '<hr />';
-    echo '<h2>' . esc_html__('Resumen de ejecución', 'em-resend-wc-emails') . '</h2>';
-    printf('<p><strong>%s</strong>: %d</p>', esc_html__('Pedidos afectados', 'em-resend-wc-emails'), isset($results['orders_total']) ? (int) $results['orders_total'] : 0);
+    echo '<h2>' . esc_html__('Resumen de ejecución', 'yg-dev-resend-wc-emails') . '</h2>';
+    printf('<p><strong>%s</strong>: %d</p>', esc_html__('Pedidos afectados', 'yg-dev-resend-wc-emails'), isset($results['orders_total']) ? (int) $results['orders_total'] : 0);
 
     if (! empty($results['sent_counts'])) {
       echo '<ul style="list-style:disc;padding-left:20px;">';
@@ -476,17 +477,17 @@ function yg_dev_resend_wc_emails_admin_page()
 
     // Tabla de pedidos
     if (! empty($results['orders'])) {
-      echo '<h3>' . esc_html__('Órdenes filtradas', 'em-resend-wc-emails') . '</h3>';
+      echo '<h3>' . esc_html__('Órdenes filtradas', 'yg-dev-resend-wc-emails') . '</h3>';
       echo '<div style="overflow:auto">';
       echo '<table class="widefat striped" style="margin-top:10px;">';
       echo '<thead><tr>'
-        . '<th>' . esc_html__('ID', 'em-resend-wc-emails') . '</th>'
-        . '<th>' . esc_html__('# Pedido', 'em-resend-wc-emails') . '</th>'
-        . '<th>' . esc_html__('Fecha', 'em-resend-wc-emails') . '</th>'
-        . '<th>' . esc_html__('Estado', 'em-resend-wc-emails') . '</th>'
-        . '<th>' . esc_html__('Total', 'em-resend-wc-emails') . '</th>'
-        . '<th>' . esc_html__('Pago', 'em-resend-wc-emails') . '</th>'
-        . '<th>' . esc_html__('Email', 'em-resend-wc-emails') . '</th>'
+        . '<th>' . esc_html__('ID', 'yg-dev-resend-wc-emails') . '</th>'
+        . '<th>' . esc_html__('# Pedido', 'yg-dev-resend-wc-emails') . '</th>'
+        . '<th>' . esc_html__('Fecha', 'yg-dev-resend-wc-emails') . '</th>'
+        . '<th>' . esc_html__('Estado', 'yg-dev-resend-wc-emails') . '</th>'
+        . '<th>' . esc_html__('Total', 'yg-dev-resend-wc-emails') . '</th>'
+        . '<th>' . esc_html__('Pago', 'yg-dev-resend-wc-emails') . '</th>'
+        . '<th>' . esc_html__('Email', 'yg-dev-resend-wc-emails') . '</th>'
         . '</tr></thead>';
       echo '<tbody>';
       foreach ($results['orders'] as $row) {
@@ -505,7 +506,7 @@ function yg_dev_resend_wc_emails_admin_page()
     }
 
     if (! empty($results['errors'])) {
-      echo '<h3>' . esc_html__('Errores', 'em-resend-wc-emails') . '</h3>';
+      echo '<h3>' . esc_html__('Errores', 'yg-dev-resend-wc-emails') . '</h3>';
       echo '<ul style="list-style:disc;padding-left:20px;">';
       foreach ($results['errors'] as $err) {
         echo '<li>' . wp_kses_post($err) . '</li>';
@@ -514,7 +515,7 @@ function yg_dev_resend_wc_emails_admin_page()
     }
 
     if (! empty($results['dry_run'])) {
-      echo '<p><em>' . esc_html__('Fue una simulación: no se envió ningún correo.', 'em-resend-wc-emails') . '</em></p>';
+      echo '<p><em>' . esc_html__('Fue una simulación: no se envió ningún correo.', 'yg-dev-resend-wc-emails') . '</em></p>';
     }
   }
 

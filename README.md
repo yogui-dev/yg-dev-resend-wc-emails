@@ -6,7 +6,7 @@ Reenvía en bloque correos de WooCommerce para pedidos dentro de un rango de fec
 - Versión: 1.0.2
 - Licencia: GPLv2 or later
 - Requiere: WordPress + WooCommerce activos
-- Archivo principal: `em-resend-wc-emails.php`
+- Archivo principal: `yg-dev-resend-wc-emails.php`
 
 ## Características
 
@@ -33,8 +33,8 @@ Reenvía en bloque correos de WooCommerce para pedidos dentro de un rango de fec
 
 ## Instalación
 
-1. Copia la carpeta del plugin `em-resend-wc-emails/` dentro de `wp-content/plugins/`.
-2. Asegúrate de que el archivo principal `em-resend-wc-emails.php` está en esa carpeta.
+1. Copia la carpeta del plugin `yg-dev-resend-wc-emails/` dentro de `wp-content/plugins/`.
+2. Asegúrate de que el archivo principal `yg-dev-resend-wc-emails.php` está en esa carpeta.
 3. Activa el plugin desde el panel de WordPress en “Plugins”.
 4. Verás el submenú en: WooCommerce → Reenviar Emails.
 
@@ -58,7 +58,7 @@ Al finalizar, verás un resumen con:
 
 ## Detalles técnicos
 
-- Pantalla y lógica principal en `em-resend-wc-emails.php`, función `yg_dev_resend_wc_emails_admin_page()`.
+- Pantalla y lógica principal en `yg-dev-resend-wc-emails.php`, función `yg_dev_resend_wc_emails_admin_page()`.
 - Consulta de pedidos con `wc_get_orders()` filtrando por `status`, `date_created` y `meta_query` (para excluir `cod`).
 - Se usa `WC()->mailer()->emails` y se dispara `->trigger($order_id)` de las clases de correo de WooCommerce, p. ej.:
   - `WC_Email_New_Order`
