@@ -3,7 +3,7 @@
 Reenvía en bloque correos de WooCommerce para pedidos dentro de un rango de fechas, con filtros por estados, tipos de correo y exclusiones (por ejemplo, pagos contraentrega `cod`). Incluye modo simulación para evaluar el impacto antes de enviar.
 
 - Autor: Yogui Dev
-- Versión: 1.0.3
+- Versión: 1.0.5
 - Licencia: GPLv2 or later
 - Requiere: WordPress + WooCommerce activos
 - Archivo principal: `yg-dev-resend-wc-emails.php`
@@ -28,6 +28,11 @@ Repositorio oficial: https://github.com/yogui-dev/yg-dev-resend-wc-emails
 - Exclusión de métodos de pago `cod` (por defecto activada).
 - Modo simulación (no envía; solo calcula cuántos correos se enviarían).
 - Opción para reenviar “Nuevo pedido (admin)” solo si no fue enviado antes, validando el meta `_new_order_email_sent`.
+
+- Ejecución por AJAX con barra de progreso y actualización en vivo del índice procesado.
+- Visualización de errores recientes durante el proceso.
+- Flag interno por pedido para evitar reenvíos repetidos (`_yg_resend_wc_emails_done`) y opción para ignorarlo.
+- Agrega una nota al pedido cuando se reenvían correos, con detalle del tipo y usuario que ejecutó la acción.
 
 ## Requisitos
 
@@ -74,7 +79,7 @@ Al finalizar, verás un resumen con:
   - `WC_Email_Customer_Invoice`
   - `WC_Email_Customer_Refunded_Order`
 - Solo se enviarán correos que estén habilitados en WooCommerce → Ajustes → Correos electrónicos (`is_enabled()`).
-- Conversión de fechas a formato MySQL respetando la zona horaria del sitio: `em_resend_wc_emails_to_mysql_datetime()`.
+- Conversión de fechas a formato MySQL respetando la zona horaria del sitio: `yg_dev_resend_wc_emails_to_mysql_datetime()`.
 
 ## Compatibilidad y notas
 
@@ -100,6 +105,19 @@ Al finalizar, verás un resumen con:
 - Registro detallado a archivo/log.
 
 ## Changelog
+
+- 1.0.5
+  - Mejora: notas en el pedido tras reenvío con detalle de correos enviados, fecha y usuario.
+  - Mejora: progreso e ID de último pedido procesado en la UI (AJAX), y manejo de errores más robusto.
+  - Varios: limpieza de código y pequeñas mejoras de UX.
+
+- 1.0.4
+  - Nuevo: ejecución por AJAX con barra de progreso y listado de errores recientes.
+  - Mejora: control de lotes en endpoint `step` y respuesta con contadores por tipo de correo.
+
+- 1.0.3
+  - Nuevo: flag interno `_yg_resend_wc_emails_done` para evitar reenvíos repetidos y opción "Ignorar flag" en la UI.
+  - Mejora: detectar si el método `cod` está activo para habilitar/deshabilitar la exclusión.
 
 - 1.0.2
   - Agregado: tabla de previsualización siempre visible bajo el formulario. Muestra, según los filtros actuales, una fila por Pedido x Tipo de correo a enviar. Respeta estados, rango de fechas, exclusión `cod`, tipos seleccionados, habilitación de emails en WooCommerce y la regla opcional "Nuevo pedido (admin) solo si no fue enviado antes".
