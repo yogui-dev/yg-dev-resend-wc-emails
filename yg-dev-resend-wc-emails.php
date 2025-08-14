@@ -853,11 +853,15 @@ function yg_dev_resend_wc_emails_ajax_step()
         continue;
       }
       try {
+        // Capturar wp_die durante el trigger para no romper la respuesta AJAX
+        add_filter('wp_die_handler', 'yg_dev_resend_wp_die_thrower', 1000);
         $emails[$class]->trigger($order_id);
         $sent_counts[$key_email] = isset($sent_counts[$key_email]) ? $sent_counts[$key_email] + 1 : 1;
         $sent_this_order[] = $key_email;
       } catch (Exception $e) {
         $errors[] = sprintf('Pedido #%d: %s (%s)', (int) $order_id, esc_html($e->getMessage()), esc_html($class));
+      } finally {
+        remove_filter('wp_die_handler', 'yg_dev_resend_wp_die_thrower', 1000);
       }
     }
 
@@ -876,7 +880,12 @@ function yg_dev_resend_wc_emails_ajax_step()
             current_time('mysql'),
             $who
           );
-          $order->add_order_note($note);
+          // Agregar nota solo si el usuario tiene permisos adecuados
+          if (current_user_can('manage_woocommerce') || current_user_can('edit_shop_order', $order_id) || current_user_can('edit_post', $order_id)) {
+            $order->add_order_note($note);
+          } else {
+            $errors[] = sprintf('Pedido #%d: sin permisos para agregar nota', (int) $order_id);
+          }
         }
         // Registrar pedido procesado (solo si se enviaron emails realmente)
         $processed_order_ids[] = $order_id;
@@ -896,6 +905,26 @@ function yg_dev_resend_wc_emails_ajax_step()
     'order_id' => $last_order_id,
     'processed_order_ids' => $processed_order_ids,
   ));
+}
+
+// Handler para convertir wp_die en Exception durante el trigger de emails
+if (! function_exists('yg_dev_resend_wp_die_thrower')) {
+  function yg_dev_resend_wp_die_thrower()
+  {
+    return 'yg_dev_resend_wp_die_callback';
+  }
+}
+
+if (! function_exists('yg_dev_resend_wp_die_callback')) {
+  function yg_dev_resend_wp_die_callback($message, $title = '', $args = array())
+  {
+    if (is_wp_error($message)) {
+      $msg = $message->get_error_message();
+    } else {
+      $msg = is_string($message) ? $message : 'wp_die';
+    }
+    throw new Exception($msg);
+  }
 }
 
 /**
