@@ -3,7 +3,7 @@
 /**
  * Plugin Name: YG_DEV - Reenviar Correos WooCommerce
  * Description: Reenvía correos de WooCommerce en bloque para un rango de fechas. Permite elegir tipos de email, estados, y excluir métodos de pago (p. ej., contraentrega/cod).
- * Version: 1.0.4
+ * Version: 1.0.5
  * Author: Yogui Dev
  * Plugin URI: https://github.com/yogui-dev/yg-dev-resend-wc-emails
  * License: GPLv2 or later
@@ -25,7 +25,38 @@ add_action('plugins_loaded', function () {
 
   // Registrar la página de administración en el menú de WooCommerce
   add_action('admin_menu', 'yg_dev_resend_wc_emails_register_menu');
+  // Encolar scripts solo en nuestra página
+  add_action('admin_enqueue_scripts', 'yg_dev_resend_wc_emails_enqueue_admin');
+  // Endpoints AJAX (admin)
+  add_action('wp_ajax_yg_resend_start', 'yg_dev_resend_wc_emails_ajax_start');
+  add_action('wp_ajax_yg_resend_step', 'yg_dev_resend_wc_emails_ajax_step');
 });
+
+/**
+ * Enqueue de assets en la página del plugin.
+ */
+function yg_dev_resend_wc_emails_enqueue_admin($hook)
+{
+  if (! current_user_can('manage_woocommerce')) return;
+  // Cargar solo en la página del plugin
+  $on_plugin_page = isset($_GET['page']) && 'yg-dev-resend-wc-emails' === $_GET['page']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+  if (! $on_plugin_page) return;
+
+  $ver = '1.0.5';
+  $handle = 'yg-dev-resend-wc-emails-admin';
+  $src = plugins_url('assets/admin.js', __FILE__);
+  wp_enqueue_script($handle, $src, array('jquery'), $ver, true);
+  wp_localize_script($handle, 'YG_RESEND_CFG', array(
+    'ajaxurl' => admin_url('admin-ajax.php'),
+    'nonce'   => wp_create_nonce('yg_resend_wc_emails_ajax'),
+    'i18n'    => array(
+      'starting' => __('Iniciando...', 'yg-dev-resend-wc-emails'),
+      'processing' => __('Procesando...', 'yg-dev-resend-wc-emails'),
+      'done' => __('Listo', 'yg-dev-resend-wc-emails'),
+      'error' => __('Error', 'yg-dev-resend-wc-emails'),
+    ),
+  ));
+}
 
 /**
  * Registrar submenú bajo WooCommerce.
@@ -493,6 +524,18 @@ function yg_dev_resend_wc_emails_admin_page()
   // Botón enviar (con nombre para detectar el submit)
   submit_button(__('Ejecutar', 'yg-dev-resend-wc-emails'), 'primary', 'em_resend_submit');
 
+  // Botón AJAX + barra de progreso
+  echo '<p style="margin-top:10px;">';
+  echo '<button type="button" id="yg-resend-ajax-btn" class="button button-secondary">' . esc_html__('Ejecutar (AJAX)', 'yg-dev-resend-wc-emails') . '</button>';
+  echo '</p>';
+  echo '<div id="yg-resend-progress" style="display:none;max-width:480px;margin-top:10px;">';
+  echo '  <div style="background:#f1f1f1;border:1px solid #ddd;height:20px;position:relative;">';
+  echo '    <div id="yg-resend-progress-bar" style="background:#2ea2cc;height:100%;width:0%;transition:width .2s;"></div>';
+  echo '  </div>';
+  echo '  <div id="yg-resend-progress-text" style="margin-top:6px;font-size:12px;color:#555;"></div>';
+  echo '  <div id="yg-resend-errors" style="margin-top:8px;color:#a00;"></div>';
+  echo '</div>';
+
   echo '</form>';
 
   // =============================
@@ -583,6 +626,272 @@ function yg_dev_resend_wc_emails_admin_page()
   }
 
   echo '</div>';
+}
+
+/**
+ * AJAX: iniciar job de reenvío. Calcula order_ids y crea estado.
+ */
+function yg_dev_resend_wc_emails_ajax_start()
+{
+  if (! current_user_can('manage_woocommerce')) wp_send_json_error(array('message' => 'forbidden'), 403);
+  check_ajax_referer('yg_resend_wc_emails_ajax', 'nonce');
+
+  // Entradas
+  $start_raw = isset($_POST['start']) ? sanitize_text_field(wp_unslash($_POST['start'])) : '';
+  $end_raw   = isset($_POST['end']) ? sanitize_text_field(wp_unslash($_POST['end'])) : '';
+  $statuses  = isset($_POST['statuses']) && is_array($_POST['statuses']) ? array_map('sanitize_text_field', wp_unslash($_POST['statuses'])) : array('wc-pending', 'wc-on-hold', 'wc-processing', 'wc-completed');
+  $emails_selected = isset($_POST['emails']) && is_array($_POST['emails']) ? array_map('sanitize_text_field', wp_unslash($_POST['emails'])) : array();
+  $exclude_cod = ! empty($_POST['exclude_cod']);
+  $dry_run = ! empty($_POST['dry_run']);
+  $only_if_not_sent_admin = ! empty($_POST['only_if_not_sent_admin']);
+  $ignore_sent_flag = ! empty($_POST['ignore_sent_flag']);
+
+  $start_mysql = yg_dev_resend_wc_emails_to_mysql_datetime($start_raw);
+  $end_mysql   = yg_dev_resend_wc_emails_to_mysql_datetime($end_raw);
+  if (! $start_mysql || ! $end_mysql || $start_mysql > $end_mysql) {
+    wp_send_json_error(array('message' => __('Rango de fechas inválido', 'yg-dev-resend-wc-emails')));
+  }
+
+  // Detectar COD activo
+  $is_cod_active = false;
+  if (function_exists('WC') && WC()) {
+    $gateways = WC()->payment_gateways();
+    if ($gateways && method_exists($gateways, 'get_available_payment_gateways')) {
+      $available = $gateways->get_available_payment_gateways();
+      if (is_array($available) && isset($available['cod'])) {
+        $cod = $available['cod'];
+        if (is_object($cod) && isset($cod->enabled) && 'yes' === $cod->enabled) {
+          $is_cod_active = true;
+        } else {
+          $is_cod_active = true; // fallback si aparece en disponibles
+        }
+      }
+    }
+  }
+
+  // Construir args pedidos
+  $args = array(
+    'status'       => $statuses,
+    'date_created' => $start_mysql . '...' . $end_mysql,
+    'limit'        => -1,
+    'return'       => 'ids',
+  );
+  if ($exclude_cod && $is_cod_active) {
+    $args['meta_query'] = array(
+      array(
+        'key'     => '_payment_method',
+        'value'   => array('cod'),
+        'compare' => 'NOT IN',
+      ),
+    );
+  }
+
+  $order_ids = wc_get_orders($args);
+  if (empty($order_ids)) {
+    wp_send_json_error(array('message' => __('No se encontraron pedidos con los filtros.', 'yg-dev-resend-wc-emails')));
+  }
+
+  // Filtrar por flag ya reenviado si corresponde (quitarlos del set inicial)
+  if (! $ignore_sent_flag) {
+    $order_ids = array_values(array_filter($order_ids, function ($oid) {
+      $already = get_post_meta($oid, '_yg_resend_wc_emails_done', true);
+      return ('1' !== strval($already));
+    }));
+  }
+  if (empty($order_ids)) {
+    wp_send_json_error(array('message' => __('Todos los pedidos están marcados como ya reenviados.', 'yg-dev-resend-wc-emails')));
+  }
+
+  // Responder solo con el total; el cliente enviará todos los filtros en cada paso
+  wp_send_json_success(array(
+    'total' => count($order_ids),
+  ));
+}
+
+/**
+ * AJAX: procesar siguiente lote.
+ */
+function yg_dev_resend_wc_emails_ajax_step()
+{
+  if (! current_user_can('manage_woocommerce')) wp_send_json_error(array('message' => 'forbidden'), 403);
+  check_ajax_referer('yg_resend_wc_emails_ajax', 'nonce');
+
+  // Recibir todos los parámetros otra vez (preferencia del usuario)
+  $start_raw = isset($_POST['start']) ? sanitize_text_field(wp_unslash($_POST['start'])) : '';
+  $end_raw   = isset($_POST['end']) ? sanitize_text_field(wp_unslash($_POST['end'])) : '';
+  $statuses  = isset($_POST['statuses']) && is_array($_POST['statuses']) ? array_map('sanitize_text_field', wp_unslash($_POST['statuses'])) : array('wc-pending', 'wc-on-hold', 'wc-processing', 'wc-completed');
+  $emails_selected = isset($_POST['emails']) && is_array($_POST['emails']) ? array_map('sanitize_text_field', wp_unslash($_POST['emails'])) : array();
+  $exclude_cod = ! empty($_POST['exclude_cod']);
+  $dry_run = ! empty($_POST['dry_run']);
+  $only_if_not_sent_admin = ! empty($_POST['only_if_not_sent_admin']);
+  $ignore_sent_flag = ! empty($_POST['ignore_sent_flag']);
+  $batch  = isset($_POST['batch']) ? absint($_POST['batch']) : 20;
+  $index  = isset($_POST['index']) ? absint($_POST['index']) : 0;
+
+  $start_mysql = yg_dev_resend_wc_emails_to_mysql_datetime($start_raw);
+  $end_mysql   = yg_dev_resend_wc_emails_to_mysql_datetime($end_raw);
+  if (! $start_mysql || ! $end_mysql || $start_mysql > $end_mysql) {
+    wp_send_json_error(array('message' => __('Rango de fechas inválido', 'yg-dev-resend-wc-emails')));
+  }
+
+  // Detectar COD activo
+  $is_cod_active = false;
+  if (function_exists('WC') && WC()) {
+    $gateways = WC()->payment_gateways();
+    if ($gateways && method_exists($gateways, 'get_available_payment_gateways')) {
+      $available = $gateways->get_available_payment_gateways();
+      if (is_array($available) && isset($available['cod'])) {
+        $cod = $available['cod'];
+        if (is_object($cod) && isset($cod->enabled) && 'yes' === $cod->enabled) {
+          $is_cod_active = true;
+        } else {
+          $is_cod_active = true; // fallback
+        }
+      }
+    }
+  }
+
+  // Recalcular order_ids con los filtros
+  $args = array(
+    'status'       => $statuses,
+    'date_created' => $start_mysql . '...' . $end_mysql,
+    'limit'        => -1,
+    'return'       => 'ids',
+  );
+  if ($exclude_cod && $is_cod_active) {
+    $args['meta_query'] = array(
+      array(
+        'key'     => '_payment_method',
+        'value'   => array('cod'),
+        'compare' => 'NOT IN',
+      ),
+    );
+  }
+  $order_ids = wc_get_orders($args);
+  if (! $ignore_sent_flag) {
+    $order_ids = array_values(array_filter($order_ids, function ($oid) {
+      $already = get_post_meta($oid, '_yg_resend_wc_emails_done', true);
+      return ('1' !== strval($already));
+    }));
+  }
+  $total = count($order_ids);
+  if ($index >= $total) {
+    wp_send_json_success(array(
+      'done' => true,
+      'index' => $index,
+      'total' => $total,
+      'sent_counts' => array(),
+      'errors' => array(),
+    ));
+  }
+
+  $end = min($index + max(1, $batch), $total);
+
+  // Mailer y mapa
+  $mailer = WC()->mailer();
+  $emails = $mailer ? $mailer->emails : array();
+  $email_map = array(
+    'admin_new_order'        => 'WC_Email_New_Order',
+    'customer_on_hold'       => 'WC_Email_Customer_On_Hold_Order',
+    'customer_processing'    => 'WC_Email_Customer_Processing_Order',
+    'customer_completed'     => 'WC_Email_Customer_Completed_Order',
+    'customer_failed'        => 'WC_Email_Failed_Order',
+    'customer_cancelled'     => 'WC_Email_Cancelled_Order',
+    'customer_invoice'       => 'WC_Email_Customer_Invoice',
+    'customer_refunded'      => 'WC_Email_Customer_Refunded_Order',
+  );
+  // Filtrar solo emails existentes
+  $to_send_keys = array();
+  foreach ($emails_selected as $key) {
+    if (isset($email_map[$key]) && isset($emails[$email_map[$key]])) {
+      $to_send_keys[] = $key;
+    }
+  }
+
+  // Acumuladores locales (ya no usamos transient de estado)
+  $sent_counts = array();
+  $errors = array();
+  $processed_order_ids = array();
+  $last_order_id = 0;
+
+  for ($i = $index; $i < $end; $i++) {
+    $order_id = isset($order_ids[$i]) ? (int) $order_ids[$i] : 0;
+    if (! $order_id) continue;
+    // Respetar flag si no se ignora (seguridad extra por si el estado expiró entre start y step)
+    if (! $ignore_sent_flag) {
+      $already = get_post_meta($order_id, '_yg_resend_wc_emails_done', true);
+      if ('1' === strval($already)) {
+        continue;
+      }
+    }
+
+    // Regla opcional para admin_new_order no enviado antes
+    $skip_admin_new_order = false;
+    if ($only_if_not_sent_admin && in_array('admin_new_order', $to_send_keys, true)) {
+      $already_admin = get_post_meta($order_id, '_new_order_email_sent', true);
+      $skip_admin_new_order = ('1' === strval($already_admin));
+    }
+
+    $sent_this_order = array();
+    foreach ($to_send_keys as $key_email) {
+      if ('admin_new_order' === $key_email && $skip_admin_new_order) {
+        continue;
+      }
+      $class = $email_map[$key_email];
+      if (! isset($emails[$class]) || ! method_exists($emails[$class], 'trigger')) {
+        continue;
+      }
+      if (method_exists($emails[$class], 'is_enabled') && ! $emails[$class]->is_enabled()) {
+        continue;
+      }
+      if ($dry_run) {
+        $sent_counts[$key_email] = isset($sent_counts[$key_email]) ? $sent_counts[$key_email] + 1 : 1;
+        continue;
+      }
+      try {
+        $emails[$class]->trigger($order_id);
+        $sent_counts[$key_email] = isset($sent_counts[$key_email]) ? $sent_counts[$key_email] + 1 : 1;
+        $sent_this_order[] = $key_email;
+      } catch (Exception $e) {
+        $errors[] = sprintf('Pedido #%d: %s (%s)', (int) $order_id, esc_html($e->getMessage()), esc_html($class));
+      }
+    }
+
+    if (! $dry_run) {
+      update_post_meta($order_id, '_yg_resend_wc_emails_done', '1');
+      // Agregar nota al pedido con detalle de reenvío
+      if (! empty($sent_this_order)) {
+        $order = wc_get_order($order_id);
+        if ($order && method_exists($order, 'add_order_note')) {
+          $user = wp_get_current_user();
+          $who = $user && $user->exists() ? $user->user_login : 'system';
+          $note = sprintf(
+            /* translators: 1: emails list, 2: datetime, 3: user */
+            __('YG Resend: correos reenviados (%1$s) el %2$s por %3$s', 'yg-dev-resend-wc-emails'),
+            implode(', ', $sent_this_order),
+            current_time('mysql'),
+            $who
+          );
+          $order->add_order_note($note);
+        }
+        // Registrar pedido procesado (solo si se enviaron emails realmente)
+        $processed_order_ids[] = $order_id;
+        $last_order_id = $order_id;
+      }
+    }
+  }
+
+  $complete = ($end >= $total);
+
+  wp_send_json_success(array(
+    'done' => $complete,
+    'index' => $end,
+    'total' => $total,
+    'sent_counts' => $sent_counts,
+    'errors' => $errors,
+    'order_id' => $last_order_id,
+    'processed_order_ids' => $processed_order_ids,
+  ));
 }
 
 /**
