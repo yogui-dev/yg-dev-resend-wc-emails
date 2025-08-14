@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Plugin Name: YG_DEV - Reenviar Correos WooCommerce
+ * Plugin Name: Reenviar Correos WooCommerce
  * Description: Reenvía correos de WooCommerce en bloque para un rango de fechas. Permite elegir tipos de email, estados, y excluir métodos de pago (p. ej., contraentrega/cod).
  * Version: 1.0.6
  * Author: Yogui Dev
