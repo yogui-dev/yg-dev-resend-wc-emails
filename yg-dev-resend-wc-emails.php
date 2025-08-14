@@ -675,6 +675,8 @@ function yg_dev_resend_wc_emails_ajax_start()
     'date_created' => $start_mysql . '...' . $end_mysql,
     'limit'        => -1,
     'return'       => 'ids',
+    'orderby'      => 'date',
+    'order'        => 'ASC',
   );
   if ($exclude_cod && $is_cod_active) {
     $args['meta_query'] = array(
@@ -757,6 +759,8 @@ function yg_dev_resend_wc_emails_ajax_step()
     'date_created' => $start_mysql . '...' . $end_mysql,
     'limit'        => -1,
     'return'       => 'ids',
+    'orderby'      => 'date',
+    'order'        => 'ASC',
   );
   if ($exclude_cod && $is_cod_active) {
     $args['meta_query'] = array(
