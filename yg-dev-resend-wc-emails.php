@@ -3,7 +3,7 @@
 /**
  * Plugin Name: YG_DEV - Reenviar Correos WooCommerce
  * Description: Reenvía correos de WooCommerce en bloque para un rango de fechas. Permite elegir tipos de email, estados, y excluir métodos de pago (p. ej., contraentrega/cod).
- * Version: 1.0.5
+ * Version: 1.0.6
  * Author: Yogui Dev
  * Plugin URI: https://github.com/yogui-dev/yg-dev-resend-wc-emails
  * License: GPLv2 or later
@@ -42,7 +42,7 @@ function yg_dev_resend_wc_emails_enqueue_admin($hook)
   $on_plugin_page = isset($_GET['page']) && 'yg-dev-resend-wc-emails' === $_GET['page']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
   if (! $on_plugin_page) return;
 
-  $ver = '1.0.5';
+  $ver = '1.0.6';
   $handle = 'yg-dev-resend-wc-emails-admin';
   $src = plugins_url('assets/admin.js', __FILE__);
   wp_enqueue_script($handle, $src, array('jquery'), $ver, true);
