@@ -3,7 +3,7 @@
 /**
  * Plugin Name: YG_DEV - Reenviar Correos WooCommerce
  * Description: Reenvía correos de WooCommerce en bloque para un rango de fechas. Permite elegir tipos de email, estados, y excluir métodos de pago (p. ej., contraentrega/cod).
- * Version: 1.0.3
+ * Version: 1.0.4
  * Author: Yogui Dev
  * Plugin URI: https://github.com/yogui-dev/yg-dev-resend-wc-emails
  * License: GPLv2 or later
@@ -68,6 +68,25 @@ function yg_dev_resend_wc_emails_admin_page()
   $messages = array();
   $results  = array();
 
+  // Detectar si el método de pago Contraentrega (cod) está activo en WooCommerce
+  $is_cod_active = false;
+  if (function_exists('WC') && WC()) {
+    $gateways = WC()->payment_gateways();
+    if ($gateways && method_exists($gateways, 'get_available_payment_gateways')) {
+      $available = $gateways->get_available_payment_gateways();
+      if (is_array($available) && isset($available['cod'])) {
+        $cod = $available['cod'];
+        // Algunos gateways exponen ->enabled = 'yes' cuando está activo
+        if (is_object($cod) && isset($cod->enabled) && 'yes' === $cod->enabled) {
+          $is_cod_active = true;
+        } else {
+          // fallback: si existe en disponibles lo consideramos activo
+          $is_cod_active = true;
+        }
+      }
+    }
+  }
+
   // =============================
   // Previsualización siempre visible (pedidos x correos según filtros actuales)
   // =============================
@@ -91,7 +110,7 @@ function yg_dev_resend_wc_emails_admin_page()
       'limit'        => -1,
       'return'       => 'ids',
     );
-    if ($current_exclude_cod) {
+    if ($current_exclude_cod && $is_cod_active) {
       $preview_args['meta_query'] = array(
         array(
           'key'     => '_payment_method',
@@ -99,6 +118,8 @@ function yg_dev_resend_wc_emails_admin_page()
           'compare' => 'NOT IN',
         ),
       );
+    } elseif ($current_exclude_cod && ! $is_cod_active) {
+      $messages[] = array('type' => 'warning', 'text' => __('La opción "Excluir pagos en efectivo (cod)" fue ignorada porque el método no está activo en el sitio.', 'yg-dev-resend-wc-emails'));
     }
 
     $preview_order_ids = wc_get_orders($preview_args);
@@ -219,8 +240,8 @@ function yg_dev_resend_wc_emails_admin_page()
         'return'       => 'ids',
       );
 
-      // Excluir métodos de pago
-      if ($exclude_cod) {
+      // Excluir métodos de pago (solo si COD está activo)
+      if ($exclude_cod && $is_cod_active) {
         $args['meta_query'] = array(
           array(
             'key'     => '_payment_method', // slug del método de pago
@@ -228,6 +249,8 @@ function yg_dev_resend_wc_emails_admin_page()
             'compare' => 'NOT IN',
           ),
         );
+      } elseif ($exclude_cod && ! $is_cod_active) {
+        $messages[] = array('type' => 'warning', 'text' => __('Se solicitó excluir pagos en efectivo (cod), pero el método no está activo. La exclusión fue ignorada.', 'yg-dev-resend-wc-emails'));
       }
 
       // Obtener pedidos
@@ -423,7 +446,12 @@ function yg_dev_resend_wc_emails_admin_page()
   echo '<tr><th scope="row">' . esc_html__('Filtros adicionales', 'yg-dev-resend-wc-emails') . '</th><td>';
   // Por defecto marcado en la primera carga; respeta la selección del usuario tras enviar
   $exclude_cod_checked = (isset($_POST['exclude_cod']) || ! isset($_POST['em_resend_submit'])) ? 'checked' : '';
-  printf('<label style="display:block;margin-bottom:6px;"><input type="checkbox" name="exclude_cod" value="1" %s> %s</label>', $exclude_cod_checked, esc_html__('Excluir pagos en efectivo (cod)', 'yg-dev-resend-wc-emails'));
+  if ($is_cod_active) {
+    printf('<label style="display:block;margin-bottom:6px;"><input type="checkbox" name="exclude_cod" value="1" %s> %s</label>', $exclude_cod_checked, esc_html__('Excluir pagos en efectivo (cod)', 'yg-dev-resend-wc-emails'));
+  } else {
+    // Deshabilitar la opción si COD no está activo
+    printf('<label style="display:block;margin-bottom:6px;opacity:0.7;"><input type="checkbox" name="exclude_cod" value="1" disabled> %s</label>', esc_html__('Excluir pagos en efectivo (cod) — no disponible (método no activo)', 'yg-dev-resend-wc-emails'));
+  }
   $only_not_sent_admin_checked = ! empty($_POST['only_if_not_sent_admin']) ? 'checked' : '';
   printf('<label style="display:block;margin-bottom:6px;"><input type="checkbox" name="only_if_not_sent_admin" value="1" %s> %s</label>', $only_not_sent_admin_checked, esc_html__('Solo enviar "Nuevo pedido (admin)" si no fue enviado antes (_new_order_email_sent ≠ 1)', 'yg-dev-resend-wc-emails'));
 
