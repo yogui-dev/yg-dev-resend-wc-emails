@@ -101,6 +101,7 @@ function yg_dev_resend_wc_emails_admin_page()
   $current_emails = isset($_POST['emails']) && is_array($_POST['emails']) ? array_map('sanitize_text_field', wp_unslash($_POST['emails'])) : array('admin_new_order', 'customer_processing', 'customer_completed');
   $current_exclude_cod = ! empty($_POST['exclude_cod']);
   $current_only_if_not_sent_admin = ! empty($_POST['only_if_not_sent_admin']);
+  $current_ignore_sent_flag = ! empty($_POST['ignore_sent_flag']);
 
   $preview_email_rows = array();
   if ($current_start_mysql && $current_end_mysql && $current_start_mysql <= $current_end_mysql) {
@@ -159,6 +160,14 @@ function yg_dev_resend_wc_emails_admin_page()
       foreach ($preview_order_ids as $oid) {
         $order = wc_get_order($oid);
         if (! $order) continue;
+
+        // Omitir pedidos ya reenviados si no se ignora el flag
+        if (! $current_ignore_sent_flag) {
+          $already_done = get_post_meta($oid, '_yg_resend_wc_emails_done', true);
+          if ('1' === strval($already_done)) {
+            continue;
+          }
+        }
 
         // Regla opcional para admin_new_order no enviado antes
         $skip_admin = false;
@@ -225,6 +234,9 @@ function yg_dev_resend_wc_emails_admin_page()
 
     // Solo reenviar "Nuevo pedido (admin)" si no se envió antes (meta _new_order_email_sent != '1')
     $only_if_not_sent_admin = ! empty($_POST['only_if_not_sent_admin']);
+
+    // Ignorar el flag de "ya reenviados"
+    $ignore_sent_flag = ! empty($_POST['ignore_sent_flag']);
 
     // Validación básica de fechas
     if (! $start_mysql || ! $end_mysql) {
@@ -299,6 +311,14 @@ function yg_dev_resend_wc_emails_admin_page()
             // Recopilar detalles del pedido para la tabla
             $order = wc_get_order($order_id);
             if ($order) {
+              // Omitir pedidos ya reenviados si no se ignora el flag
+              if (! $ignore_sent_flag) {
+                $already_done = get_post_meta($order_id, '_yg_resend_wc_emails_done', true);
+                if ('1' === strval($already_done)) {
+                  // Saltar completamente este pedido
+                  continue;
+                }
+              }
               $date_created = $order->get_date_created();
               $orders_data[] = array(
                 'id'       => (int) $order_id,
@@ -358,6 +378,11 @@ function yg_dev_resend_wc_emails_admin_page()
                 // Registrar error por pedido/email (solo en memoria para mostrar al final)
                 $results['errors'][] = sprintf('Pedido #%d: %s (%s)', (int) $order_id, esc_html($e->getMessage()), esc_html($class));
               }
+            }
+
+            // Marcar el pedido como "ya reenviado" si no es simulación
+            if (! $dry_run) {
+              update_post_meta($order_id, '_yg_resend_wc_emails_done', '1');
             }
           }
 
@@ -452,6 +477,9 @@ function yg_dev_resend_wc_emails_admin_page()
     // Deshabilitar la opción si COD no está activo
     printf('<label style="display:block;margin-bottom:6px;opacity:0.7;"><input type="checkbox" name="exclude_cod" value="1" disabled> %s</label>', esc_html__('Excluir pagos en efectivo (cod) — no disponible (método no activo)', 'yg-dev-resend-wc-emails'));
   }
+  // Checkbox para ignorar el flag de "ya reenviados"
+  $ignore_sent_checked = ! empty($_POST['ignore_sent_flag']) ? 'checked' : '';
+  printf('<label style="display:block;margin-bottom:6px;"><input type="checkbox" name="ignore_sent_flag" value="1" %s> %s</label>', $ignore_sent_checked, esc_html__('Ignorar flag de pedidos ya reenviados', 'yg-dev-resend-wc-emails'));
   $only_not_sent_admin_checked = ! empty($_POST['only_if_not_sent_admin']) ? 'checked' : '';
   printf('<label style="display:block;margin-bottom:6px;"><input type="checkbox" name="only_if_not_sent_admin" value="1" %s> %s</label>', $only_not_sent_admin_checked, esc_html__('Solo enviar "Nuevo pedido (admin)" si no fue enviado antes (_new_order_email_sent ≠ 1)', 'yg-dev-resend-wc-emails'));
 
